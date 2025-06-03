@@ -1,84 +1,29 @@
-# Turborepo starter
+# noob.gg
+<p align="center">
+  <img src="docs/noobgg-logo.png" alt="noob.gg logo" height="120" />
+</p>
 
-This Turborepo starter is maintained by the Turborepo core team.
+Welcome to the project!
 
-## Using this example
+This project uses Turborepo with a Hono.js backend and a Next.js 15 frontend.
 
-Run the following command:
+## Documentation
 
-```sh
-npx create-turbo@latest
-```
+The primary documentation for this project is in Turkish. An English version is also available.
 
-## What's inside?
+- **Türkçe Dokümanlar (Primary):** [README.tr.md](./README.tr.md)
+- **English Documentation (Secondary):** [README.en.md](./README.en.md)
 
-This Turborepo includes the following packages/apps:
+Please refer to these files for information on project setup, development workflow, technologies used, and contribution guidelines.
 
-### Apps and Packages
+---
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Contributors
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+Meet our amazing contributors:
 
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-pnpm build
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-pnpm dev
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-npx turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-npx turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+<a href="https://github.com/altudev"><img width="60px" alt="altudev" src="https://github.com/altudev.png"/></a>
+<a href="https://github.com/furkanczay"><img width="60px" alt="Furkan Özay" src="https://github.com/furkanczay.png"/></a>
+<a href="https://github.com/HikmetMelikk"><img width="60px" alt="Hikmet Melik" src="https://github.com/HikmetMelikk.png"/></a>
+<a href="https://github.com/apps/google-labs-jules"><img width="60px" alt="Jules (Google Labs AI)" src="https://avatars.githubusercontent.com/in/842251?s=41&u=e6ce41f2678ba45349e003a9b1d8719b7f414a6f&v=4"/></a>
+<a href="https://github.com/apps/devin-ai-integration"><img width="60px" alt="DevinAI Integration" src="https://avatars.githubusercontent.com/in/811515?s=41&u=22ae8177548c8cd6cccb497ac571937d080c80bc&v=4"/></a>
