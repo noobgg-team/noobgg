@@ -20,7 +20,7 @@ This project is a monorepo managed using [Turborepo](https://turbo.build/repo). 
 
 1.  Clone the project repository:
     ```bash
-    git clone https://github.com/altudev/noob.gg.git
+    git clone https://github.com/altudev/noobgg.git
     cd noob.gg
     ```
 2.  Install the dependencies:
