@@ -1,7 +1,9 @@
 {
   "name": "api",
   "scripts": {
-    "dev": "bun run --hot src/index.ts"
+    "dev": "bun run --hot src/index.ts",
+    "migrate": "drizzle-kit migrate",
+    "debug": "bun run --inspect src/index.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.821.0",
