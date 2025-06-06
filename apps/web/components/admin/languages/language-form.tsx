@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { toast } from 'sonner'; // Added toast import
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -71,8 +72,13 @@ export function LanguageForm({ initialData, onSubmit, isPending, onCancel }: Lan
       ...values,
       flagUrl: values.flagUrl === '' ? null : values.flagUrl, // Convert empty string to null
     };
-    await onSubmit(dataToSubmit);
-    // form.reset(); // Resetting form might be handled by parent component after successful submission
+    try {
+      await onSubmit(dataToSubmit);
+      // form.reset(); // Resetting form might be handled by parent component after successful submission
+    } catch (error: any) {
+      console.error("Failed to save language:", error);
+      toast.error(`Failed to save language: ${error.message || 'Unknown error'}`);
+    }
   };
 
   return (

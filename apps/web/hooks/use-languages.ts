@@ -132,7 +132,7 @@ export const useLanguages = (options: UseLanguagesOptions = {}) => {
   };
 };
 
-export const useAllLanguages = ()_ => {
+export const useAllLanguages = () => {
   const { data, isLoading, error } = useQuery<Language[], Error>({
     queryKey: [LANGUAGE_QUERY_KEY, "all"],
     queryFn: async () => {

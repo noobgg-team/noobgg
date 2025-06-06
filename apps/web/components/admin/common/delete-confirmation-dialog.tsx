@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void; // To control the dialog state from parent
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>; // Can be sync or async
   title?: string;
   description?: string;
   confirmText?: string;
@@ -46,7 +46,24 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
           <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isPending}>
             {cancelText}
           </AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} disabled={isPending} className="bg-destructive hover:bg-destructive/90">
+          <AlertDialogAction
+            onClick={async () => {
+              if (isPending) return;
+              try {
+                await onConfirm();
+              } catch (error) {
+                // Error should be handled by the caller (e.g., displayed in a toast)
+                // This component's responsibility is to execute and manage dialog state.
+                console.error("Delete confirmation dialog onConfirm error:", error);
+              } finally {
+                // Ensure dialog closes even if onConfirm throws and isn't caught by caller,
+                // or if it's synchronous.
+                onOpenChange(false);
+              }
+            }}
+            disabled={isPending}
+            className="bg-destructive hover:bg-destructive/90"
+          >
             {isPending ? "Deleting..." : confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -79,7 +96,20 @@ export const DeleteConfirmationDialogWithTrigger: React.FC<DeleteConfirmationDia
           <AlertDialogCancel onClick={() => setIsOpen(false)} disabled={props.isPending}>
             {props.cancelText || "Cancel"}
           </AlertDialogCancel>
-          <AlertDialogAction onClick={props.onConfirm} disabled={props.isPending} className="bg-destructive hover:bg-destructive/90">
+          <AlertDialogAction
+            onClick={async () => {
+              if (props.isPending) return;
+              try {
+                await props.onConfirm();
+              } catch (error) {
+                console.error("Delete confirmation dialog (with trigger) onConfirm error:", error);
+              } finally {
+                setIsOpen(false);
+              }
+            }}
+            disabled={props.isPending}
+            className="bg-destructive hover:bg-destructive/90"
+          >
             {props.isPending ? "Deleting..." : (props.confirmText || "Delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
