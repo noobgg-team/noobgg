@@ -11,7 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   // AlertDialogTrigger, // No longer needed directly in DeleteConfirmationDialog if it's always controlled
-} from "../../../ui/alert-dialog";
+} from "@/components/ui/alert-dialog";
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
