@@ -12,7 +12,6 @@ import {
   AlertDialogTitle,
   // AlertDialogTrigger, // No longer needed directly in DeleteConfirmationDialog if it's always controlled
 } from "../../../ui/alert-dialog";
-import { Button } from "../../../ui/button"; // Button might not be needed here if trigger is passed in
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
