@@ -37,9 +37,10 @@ export const createLanguage = async (req: Request, res: Response) => {
     const [existingSoftDeleted] = await db
       .select({ id: languagesTableSchema.id, deletedAt: languagesTableSchema.deletedAt })
       .from(languagesTableSchema)
-      .where(and(eq(languagesTableSchema.code, code), isNull(languagesTableSchema.deletedAt))); // Ensure we are checking non-deleted ones for conflict, or reactivate
+      .where(and(eq(languagesTableSchema.code, code), isNull(languagesTableSchema.deletedAt)));
 
-    if (existingSoftDeleted && !existingSoftDeleted.deletedAt) {
+    // If existingSoftDeleted is found, it means a language with the same code already exists and is not soft-deleted.
+    if (existingSoftDeleted) {
          return res.status(409).json({ message: 'Language with this code already exists.' });
     }
 
