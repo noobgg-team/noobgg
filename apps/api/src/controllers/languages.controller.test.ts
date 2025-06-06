@@ -10,7 +10,7 @@ import {
   // getAllLanguages,
   // deleteLanguage,
 } from './languages.controller'; // Assuming this is where your controller functions are
-import { z } } from 'zod'; // For ZodError simulation if needed
+import { z } from 'zod'; // For ZodError simulation if needed
 
 // --- Mocking Drizzle ORM and db object ---
 const mockDbInstance = {
@@ -130,29 +130,57 @@ describe('Languages Controller', () => {
   let mockExistingLanguage: any;
 
   beforeEach(() => {
-    mockResJson.mockClear();
-    mockReqJson.mockClear();
-    mockReqParam.mockClear();
-    mockReqQuery.mockClear();
+    mockResJson?.mockClear?.();
+    mockReqJson?.mockClear?.(); // Also reset in mockContext, but clear here for consistency
+    mockReqParam?.mockClear?.();
+    mockReqQuery?.mockClear?.();
+    mockContext()?.status?.mockClear?.(); // Clearing status mock as per example, though context is a fn
 
     // Reset all db method mocks in mockDbInstance
     Object.values(mockDbInstance).forEach(m => {
-      if (m && typeof m.mockClear === 'function') m.mockClear();
-      // For nested mocks like insert().values().returning()
-      if (m.mock && m.mock.results) {
-        m.mock.results.forEach((res: any) => {
-          if (res.value && typeof res.value.mockClear === 'function') res.value.mockClear();
-          if (res.value && res.value.mock && res.value.mock.results) {
-            res.value.mock.results.forEach((innerRes: any) => {
-              if (innerRes.value && typeof innerRes.value.mockClear === 'function') innerRes.value.mockClear();
-            });
-          }
-        });
-      }
-    });
-     mockDbSelectForCount.from.mockClear();
-     mockTotalRecordsQuery.count.mockClear();
+      m?.mockClear?.(); // Clears the top-level mock function (e.g., db.select, db.insert)
 
+      // If the mock itself returned other mocks that need clearing,
+      // they should ideally be cleared directly if they are stored on `m` or handled by `mockReset` if appropriate.
+      // The previous deep iteration was complex and might not be standard.
+      // Bun's `mockClear` clears .mock property, which includes calls, instances, results.
+      // If `m` is a mock that returns another mock function object (e.g. `db.insert().values()`),
+      // then `values` itself would need to be cleared if it were a persistent mock object.
+      // However, the current structure redefines implementations on each call or uses mockReturnThis.
+      // Let's ensure specific nested mocks that are explicitly defined and reused are cleared.
+      if (m === mockDbInstance.insert) {
+        // Example if `values` or `returning` were persistent mocks attached to `m.insert`
+        // m.values?.mockClear?.(); // This depends on how values is structured
+        // m.values()?.returning?.mockClear?.(); // If values() returns an object with a returning mock
+      }
+      // Similar logic for `update` if `set`, `where`, `returning` were persistent mocks
+    });
+
+    // Clear specific, potentially nested, and reused mocks explicitly
+    // For mockDbSelectForCount which is a mock function
+    (mockDbSelectForCount as any)?.mockClear?.();
+    // And its returned 'from' mock if 'from' itself is a separate mock function object
+    mockDbSelectForCount?.from?.mockClear?.();
+    // And the 'where' mock if it's a separate mock function object returned by 'from()'
+    // mockDbSelectForCount?.from?.().where?.mockClear?.(); // This line is tricky because from() is called.
+
+    // For mockTotalRecordsQuery which is an object with a mock function 'count'
+    mockTotalRecordsQuery?.count?.mockClear?.();
+
+    // The most reliable way is to clear the direct mock functions.
+    // If a mock function `A` returns another mock function `B`, then `B` needs to be cleared separately
+    // if it maintains state across tests. The `mockDbInstance` clear above handles the first level.
+
+    // Re-evaluating the nested mocks:
+    // The `insert` and `update` mocks in `mockDbInstance` are defined with `mock().mockImplementation(...)`
+    // where the implementation returns an object with further mock functions.
+    // E.g., `db.insert().values().returning()`.
+    // `mockDbInstance.insert.mockClear()` clears `insert`.
+    // The `values` and `returning` mocks are created fresh on each call due to `mockImplementation`.
+    // So, clearing `mockDbInstance.insert` should be enough for its chain unless intermediate results are stored.
+
+    // Let's stick to clearing the main mocks and explicitly defined helper mocks.
+    // The previous Object.values loop handles members of mockDbInstance.
 
     mockExistingLanguage = {
       id: 1n, // Use BigInt for ID as in schema
