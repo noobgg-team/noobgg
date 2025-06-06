@@ -64,6 +64,13 @@ export function LanguageForm({ initialData, onSubmit, isPending, onCancel }: Lan
         code: initialData.code,
         flagUrl: initialData.flagUrl ?? '',
       });
+    } else {
+      // Clear form when initialData is not provided (e.g., for creating a new entry)
+      form.reset({
+        name: "",
+        code: "",
+        flagUrl: "",
+      });
     }
   }, [initialData, form]);
 

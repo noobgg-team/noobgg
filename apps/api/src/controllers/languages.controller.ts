@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { db } from '../db';
 import { languages as languagesTableSchema } from '../db/schemas/languages.drizzle';
 import { z } from 'zod';
-import { asc, desc, eq, ilike, or, count, isNull, and } from 'drizzle-orm'; // Added isNull and and
+import { asc, desc, eq, ilike, or, count, isNull, and, ne } from 'drizzle-orm'; // Added ne, isNull and and
 
 // Helper function to convert BigInt ID to string for a single language object
 const stringifyLanguageId = (language: typeof languagesTableSchema.$inferSelect) => {
@@ -216,14 +216,28 @@ export const updateLanguage = async (req: Request, res: Response) => {
     }
 
     // If code is being updated, check for conflicts with other non-deleted languages
-    // Note: A robust check for code conflicts during update would involve:
-    // 1. Querying for languages where code matches the new code,
-    //    deletedAt IS NULL, AND id IS NOT the current language's id.
-    // 2. If such a record exists, return a 409 conflict.
-    // This is often best handled by a unique database constraint that considers NULLs
-    // (e.g., a partial unique index or a unique index on `(code, COALESCE(deleted_at, 'epoch'))`).
-    // The generic unique constraint error (23505) will be caught below if the DB enforces it.
+    if (code) {
+      const [existingLanguageWithCode] = await db
+        .select()
+        .from(languagesTableSchema)
+        .where(
+          and(
+            eq(languagesTableSchema.code, code),
+            ne(languagesTableSchema.id, id), // id is the BigInt ID of the current language
+            isNull(languagesTableSchema.deletedAt)
+          )
+        )
+        .limit(1);
 
+      if (existingLanguageWithCode) {
+        return res.status(409).json(
+          { message: "A language with this code already exists." }
+        );
+      }
+    }
+    // Note: A similar check for 'name' might be desired if 'name' should also be unique.
+    // The generic unique constraint error (23505) for 'name' (if languages_name_idx is unique)
+    // will be caught in the main try-catch block.
 
     const [updatedLanguageFromDb] = await db
       .update(languagesTableSchema)
