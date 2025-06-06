@@ -53,27 +53,36 @@ mock.module('../db', () => ({
       if (selectArg && typeof selectArg === 'object' && 'count' in selectArg) {
         return mockDbSelectForCount; // Use the count-specific mock
       }
-      // Default select behavior
-      const self = {
+      // Default select behavior for data queries
+      // This structure allows chaining like db.select().from().where()...offset()
+      // and the final call (e.g. offset() or the whole chain if awaited directly after select())
+      // should resolve to a promise.
+      const queryChainer = {
         from: mock().mockReturnThis(),
         where: mock().mockReturnThis(),
         orderBy: mock().mockReturnThis(),
         limit: mock().mockReturnThis(),
-        offset: mock().mockReturnThis(),
-        // Add then directly to the object returned by select() to simulate promise-like behavior for query execution
-        then: (callback: any) => callback([]), // Default to returning empty array for a select query
-      };
-      // Make where, orderBy, limit, offset return the `self` object to allow chaining,
-      // and then make them thenable by adding a `then` method.
-      self.from = mock(() => self);
-      self.where = mock(() => self);
-      self.orderBy = mock(() => self);
-      self.limit = mock(() => self);
-      self.offset = mock(() => self);
+        // offset is the typical terminal method for getLanguages data query.
+        // It should return a Promise.
+        offset: mock().mockResolvedValue([]), // Default to resolving with an empty array
 
-      // Mock a default `returning` for cases it might be chained directly on select (though less common)
-      // self.returning = mock().mockResolvedValue([]);
-      return self;
+        // If select() itself can be awaited without further chaining in some use cases:
+        // then: (callback: any) => callback([]), // This was the old problematic approach.
+        // Instead, select itself would need to be mockResolvedValue if it's directly awaited.
+        // However, the typical usage in this controller is db.select().from(...)...
+        // So, the methods on the object returned by select() are important.
+      };
+      // Ensure from, where, etc., return the queryChainer to allow chaining.
+      queryChainer.from = mock(() => queryChainer);
+      queryChainer.where = mock(() => queryChainer);
+      queryChainer.orderBy = mock(() => queryChainer);
+      queryChainer.limit = mock(() => queryChainer);
+      // queryChainer.offset is already defined above to return a Promise.
+
+      // For the rare case `await db.select()` is used directly for data (not typical with Drizzle for complex queries)
+      // and needs to be a promise, then `select` itself should be `mock().mockResolvedValue([])`.
+      // But since we return `queryChainer` which has promise-returning terminal methods, this covers the chained calls.
+      return queryChainer;
     }),
   }
 }));
@@ -345,36 +354,41 @@ describe('Languages Controller', () => {
       // and db.select({ count: count() }).from().where() to return [{ count: 0 }]
       // This can be overridden in specific tests if needed.
 
-      const mockQueryChain = {
-        orderBy: mock().mockReturnThis(),
-        limit: mock().mockReturnThis(),
-        offset: mock().mockReturnThis(),
-        then: (callback: any) => callback([]), // Default to empty array for results
-      };
+      // This beforeEach in describe('getLanguages (Search Sanitization)')
+      // sets up specific mocks for getLanguages tests.
+      // The global db.select mock (fixed above) is a general default.
+      // This specific setup for getLanguages tests should remain,
+      // but it also needs to ensure its terminal methods correctly return promises.
 
-      const fromMock = mock().mockImplementation(() => ({
-        ...mockQueryChain,
-        where: mock().mockImplementation(() => mockQueryChain) // Default where clause for items
-      }));
+      // Original structure in this specific beforeEach:
+      // const mockQueryChain = {
+      //   orderBy: mock().mockReturnThis(),
+      //   limit: mock().mockReturnThis(),
+      //   offset: mock().mockReturnThis(),
+      //   then: (callback: any) => callback([]), // This was problematic
+      // };
+      // const fromMock = mock().mockImplementation(() => ({
+      //   ...mockQueryChain,
+      //   where: mock().mockImplementation(() => mockQueryChain)
+      // }));
+      // (db.select as any).mockImplementation((selectArg?: any) => { ... });
+      // This will be superseded by the setupDbSelectForGetLanguages if that's called.
+      // If we want a default for getLanguages tests *before* setupDbSelectForGetLanguages is called,
+      // it should also follow the new pattern.
 
-      (db.select as any).mockImplementation((selectArg?: any) => {
-         if (selectArg && typeof selectArg === 'object' && 'count' in selectArg) { // Count query
-            return {
-                from: mock().mockImplementation(() => ({
-                    where: mock().mockResolvedValue([{ count: 0 }]) // Default count
-                }))
-            };
-        }
-        return { // Default select for items
-            from: fromMock,
-             // for simpler non-chained calls if any (though controller uses chain)
-            where: mock().mockImplementation(() => mockQueryChain),
-            orderBy: mock().mockReturnThis(),
-            limit: mock().mockReturnThis(),
-            offset: mock().mockReturnThis(),
-            then: (callback: any) => callback([]),
-        };
-      });
+      // Let's ensure the default behavior within this describe block, if any test runs
+      // before setupDbSelectForGetLanguages, is also correct.
+      // The global mock is already fixed. This local override might not be strictly necessary
+      // if setupDbSelectForGetLanguages is always called.
+      // For safety, if any test in this block *doesn't* call setupDbSelectForGetLanguages,
+      // it would fall back to the main db.select mock defined outside this describe block.
+      // That main mock is now corrected. So, this specific (db.select as any).mockImplementation
+      // in this beforeEach might be redundant or could be removed if setupDbSelectForGetLanguages
+      // is always used in this describe block.
+
+      // For now, let's assume setupDbSelectForGetLanguages will correctly set up the chain
+      // to resolve as a promise for each test that needs it.
+      // The critical fix was for the main default mock of db.select.
     });
 
     const setupDbSelectForGetLanguages = (
@@ -385,17 +399,14 @@ describe('Languages Controller', () => {
             orderBy: mock().mockReturnThis(),
             limit: mock().mockReturnThis(),
             offset: mock().mockReturnThis(),
-            then: (callback: (res: any[]) => void) => callback(filteredLangs.map(l => ({...l, id: l.id.toString() }))) // Simulate stringifyId
-        };
-        const mockQueryChain = {
-            from: mock().mockReturnThis(),
-            where: mock().mockReturnValue(mockQueryResult),
-            // also directly on select if from is skipped by mistake in test mock
-            orderBy: mock().mockReturnThis(),
-            limit: mock().mockReturnThis(),
-            offset: mock().mockReturnThis(),
+            // then: (callback: (res: any[]) => void) => callback(filteredLangs.map(l => ({...l, id: l.id.toString() }))) // Old
+            // Ensure the terminal part of this chain (offset) resolves.
+            // The 'mockQueryResult' should BE the promise, or the function returning it.
+            // So, offset should be mock().mockResolvedValue(data)
         };
 
+        // This helper function is responsible for setting up the mock for a specific test.
+        // It needs to ensure the final part of the chain is a promise.
         (db.select as any).mockImplementation((selectFields?: any) => {
             if (selectFields && selectFields.count) { // Handling the count query
                 return {
@@ -404,7 +415,14 @@ describe('Languages Controller', () => {
                 };
             }
             // Handling the data query
-            return mockQueryChain;
+            // The object returned here must have its terminal method (e.g., offset) return a promise.
+            return {
+                from: mock().mockReturnThis(),
+                where: mock().mockReturnThis(),
+                orderBy: mock().mockReturnThis(),
+                limit: mock().mockReturnThis(),
+                offset: mock().mockResolvedValue(filteredLangs.map(l => ({...l, id: l.id.toString() }))), // Make offset resolve
+            };
         });
     };
 
