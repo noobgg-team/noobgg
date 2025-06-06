@@ -1,7 +1,7 @@
 "use client";
 
 import { apiClient } from "@/lib/api-client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"; // Added keepPreviousData
 import { toast } from "sonner"; // Assuming 'sonner' is used for toasts
 
 // Types should align with your API responses and shared types
@@ -50,6 +50,7 @@ export const useLanguages = (options: UseLanguagesOptions = {}) => {
     isLoading,
     error,
     refetch, // tanstack-query provides refetch
+    isPlaceholderData, // Added isPlaceholderData
   } = useQuery<PaginatedLanguagesResponse, Error>({
     queryKey,
     queryFn: async () => {
@@ -63,7 +64,7 @@ export const useLanguages = (options: UseLanguagesOptions = {}) => {
       const response = await apiClient.get(`/languages?${params.toString()}`);
       return response.data;
     },
-    // keepPreviousData: true, // Optional: for smoother pagination
+    placeholderData: keepPreviousData, // Replaced keepPreviousData: true
   });
 
   const queryClient = useQueryClient();
@@ -122,6 +123,7 @@ export const useLanguages = (options: UseLanguagesOptions = {}) => {
     pagination: queryData?.pagination || { page: 1, limit: 10, totalPages: 1, totalRecords: 0 },
     isLoading,
     error,
+    isPlaceholderData, // Added to return object
     refetchLanguages: refetch, // Expose refetch
     createLanguage: createLanguageMutation.mutateAsync,
     updateLanguage: updateLanguageMutation.mutateAsync,

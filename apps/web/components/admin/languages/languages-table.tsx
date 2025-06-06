@@ -30,26 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
-// Import the hooks (assuming they will be provided in this path)
-// import { useLanguages, useDeleteLanguage } from '@/hooks/use-languages';
-// For now, let's define types based on the API
-// This should ideally come from a shared types directory or from the hook itself
-
-interface Language {
-  id: number;
-  name: string;
-  code: string;
-  flagUrl?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Pagination {
-  page: number;
-  limit: number;
-  totalPages: number;
-  totalRecords: number;
-}
+import { type Language, type Pagination } from "@/hooks/use-languages"; // Imported types
 
 interface LanguagesTableProps {
   // These props will be replaced by data from useLanguages hook
@@ -59,7 +40,7 @@ interface LanguagesTableProps {
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
   onSearchChange: (search: string) => void;
-  onSortChange: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
+  onSortChange: (sortBy: string, sortOrder?: 'asc' | 'desc') => void; // Updated to allow undefined for clearing sort
   onEdit: (language: Language) => void;
   onDelete: (language: Language) => void; // This will trigger a confirmation
 }
@@ -89,8 +70,17 @@ export function LanguagesTable({
             variant="ghost"
             onClick={() => {
               const currentSort = column.getIsSorted();
-              column.toggleSorting(currentSort === "asc" ? "desc" : "asc");
-              onSortChange('name', column.getIsSorted() as 'asc' | 'desc');
+              let newSortOrder: 'asc' | 'desc' | undefined;
+              if (currentSort === "asc") {
+                newSortOrder = "desc";
+              } else if (currentSort === "desc") {
+                newSortOrder = undefined; // Clear sort
+              } else {
+                newSortOrder = "asc";
+              }
+              onSortChange(column.id, newSortOrder);
+              // No longer calling column.toggleSorting() directly here as manualSorting is true
+              // The sorting state will be updated via props from the parent.
             }}
           >
             Name
@@ -108,8 +98,15 @@ export function LanguagesTable({
             variant="ghost"
             onClick={() => {
               const currentSort = column.getIsSorted();
-              column.toggleSorting(currentSort === "asc" ? "desc" : "asc");
-              onSortChange('code', column.getIsSorted() as 'asc' | 'desc');
+              let newSortOrder: 'asc' | 'desc' | undefined;
+              if (currentSort === "asc") {
+                newSortOrder = "desc";
+              } else if (currentSort === "desc") {
+                newSortOrder = undefined; // Clear sort
+              } else {
+                newSortOrder = "asc";
+              }
+              onSortChange(column.id, newSortOrder);
             }}
           >
             Code

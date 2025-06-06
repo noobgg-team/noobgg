@@ -15,16 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-// Assuming Language type is available or will be provided by the hook later
-// For now, let's redefine it for clarity, but this should be shared.
-interface Language {
-  id: number;
-  name: string;
-  code: string;
-  flagUrl?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+import { type Language } from '@/hooks/use-languages'; // Imported Language type
 
 // Schema for form validation
 const languageFormSchema = z.object({
@@ -82,9 +73,13 @@ export function LanguageForm({ initialData, onSubmit, isPending, onCancel }: Lan
     try {
       await onSubmit(dataToSubmit);
       // form.reset(); // Resetting form might be handled by parent component after successful submission
-    } catch (error: any) {
-      console.error("Failed to save language:", error);
-      toast.error(`Failed to save language: ${error.message || 'Unknown error'}`);
+    } catch (error) {
+      console.error("Form submission error:", error); // Keep or adjust console logging
+      if (error instanceof Error) {
+        toast.error(`Failed to save language: ${error.message}`);
+      } else {
+        toast.error("Failed to save language: An unknown error occurred");
+      }
     }
   };
 

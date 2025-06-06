@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react'; // Added useState
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,9 +10,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Optional: If the dialog is triggered by a child button
-} from "@/components/ui/alert-dialog"; // Assuming ShadCN UI components
-import { Button } from "@/components/ui/button";
+  // AlertDialogTrigger, // No longer needed directly in DeleteConfirmationDialog if it's always controlled
+} from "../../../ui/alert-dialog";
+import { Button } from "../../../ui/button"; // Button might not be needed here if trigger is passed in
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
@@ -72,48 +72,43 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
   );
 };
 
-// Example of how it might be used with a trigger (optional, can be controlled externally too)
-interface DeleteConfirmationDialogWithTriggerProps extends Omit<DeleteConfirmationDialogProps, 'isOpen' | 'onOpenChange'> {
-  triggerButton: React.ReactNode; // The button that opens the dialog
+// Props for the component that includes a trigger
+interface DeleteConfirmationDialogWithTriggerProps {
+  triggerComponent: React.ReactNode; // The component that will trigger the dialog
+  onConfirm: () => void | Promise<void>;
+  title?: string;
+  description?: string;
+  confirmText?: string;
+  cancelText?: string;
+  isPending?: boolean;
 }
 
 export const DeleteConfirmationDialogWithTrigger: React.FC<DeleteConfirmationDialogWithTriggerProps> = ({
- triggerButton,
- ...props
+  triggerComponent,
+  onConfirm,
+  title,
+  description,
+  confirmText,
+  cancelText,
+  isPending,
 }) => {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-      <AlertDialogTrigger asChild>
-        {triggerButton}
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{props.title || "Are you absolutely sure?"}</AlertDialogTitle>
-          <AlertDialogDescription>{props.description || "This action cannot be undone. This will permanently delete the item."}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setIsOpen(false)} disabled={props.isPending}>
-            {props.cancelText || "Cancel"}
-          </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={async () => {
-              if (props.isPending) return;
-              try {
-                await props.onConfirm();
-              } catch (error) {
-                console.error("Delete confirmation dialog (with trigger) onConfirm error:", error);
-              } finally {
-                setIsOpen(false);
-              }
-            }}
-            disabled={props.isPending}
-            className="bg-destructive hover:bg-destructive/90"
-          >
-            {props.isPending ? "Deleting..." : (props.confirmText || "Delete")}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <>
+      <div onClick={() => setIsOpen(true)} style={{ display: 'inline-block', cursor: 'pointer' }}>
+        {triggerComponent}
+      </div>
+      <DeleteConfirmationDialog
+        isOpen={isOpen}
+        onOpenChange={setIsOpen}
+        onConfirm={onConfirm}
+        title={title}
+        description={description}
+        confirmText={confirmText}
+        cancelText={cancelText}
+        isPending={isPending}
+      />
+    </>
   );
-}
+};
