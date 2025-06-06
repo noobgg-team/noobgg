@@ -17,6 +17,11 @@ const stringifyLanguageIds = (languagesArray: Array<typeof languagesTableSchema.
   return languagesArray.map(stringifyLanguageId);
 };
 
+// Helper function to escape special characters for LIKE patterns
+const escapeLikePattern = (pattern: string): string => {
+  return pattern.replace(/%/g, '\\%').replace(/_/g, '\\_');
+};
+
 // Zod schema for creating a language
 const createLanguageSchema = z.object({
   name: z.string().min(1),
@@ -107,7 +112,8 @@ export const getLanguages = async (req: Request, res: Response) => {
     const baseQueryConditions = [isNull(languagesTableSchema.deletedAt)];
 
     if (search) {
-      baseQueryConditions.push(or(ilike(languagesTableSchema.name, `%${search}%`), ilike(languagesTableSchema.code, `%${search}%`)));
+      const sanitizedSearchTerm = escapeLikePattern(search);
+      baseQueryConditions.push(or(ilike(languagesTableSchema.name, `%${sanitizedSearchTerm}%`), ilike(languagesTableSchema.code, `%${sanitizedSearchTerm}%`)));
     }
 
     const combinedConditions = and(...baseQueryConditions);
@@ -201,8 +207,30 @@ export const updateLanguage = async (req: Request, res: Response) => {
 
     const { name, code, flagUrl } = validationResult.data;
 
-    if (!name && !code && flagUrl === undefined) {
-      return res.status(400).json({ message: 'No fields to update' });
+    // Construct updateData object
+    const updateData: { name?: string; code?: string; flagUrl?: string | null; updatedAt: Date } = {
+      updatedAt: new Date(),
+    };
+
+    if (name !== undefined) {
+      updateData.name = name;
+    }
+    if (code !== undefined) {
+      updateData.code = code;
+    }
+    if (flagUrl !== undefined) { // Allows explicit null to be set, skips if undefined
+      updateData.flagUrl = flagUrl;
+    }
+
+    // Check if there's anything to update besides updatedAt
+    if (Object.keys(updateData).length === 1 && updateData.updatedAt) {
+       // If only updatedAt is present, it means no actual data fields were provided for update.
+       // However, the original check was "!name && !code && flagUrl === undefined"
+       // which means if flagUrl was explicitly null, it would pass.
+       // The new logic correctly identifies if any of name, code, or flagUrl (even if null) were passed.
+      if (name === undefined && code === undefined && flagUrl === undefined) {
+        return res.status(400).json({ message: 'No fields to update' });
+      }
     }
 
     // Check if language exists and is not soft-deleted before attempting update
@@ -241,7 +269,7 @@ export const updateLanguage = async (req: Request, res: Response) => {
 
     const [updatedLanguageFromDb] = await db
       .update(languagesTableSchema)
-      .set({ name, code, flagUrl, updatedAt: new Date() })
+      .set(updateData)
       .where(and(eq(languagesTableSchema.id, id), isNull(languagesTableSchema.deletedAt))) // Ensure we only update non-deleted
       .returning();
 
