@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ChevronDown, ArrowRight } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { useTheme } from "next-themes";
-import ThemeSwitcher from "../theme-switcher";
-import LanguageSwitcher from "../language-switcher";
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X, ChevronDown, ArrowRight, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { useTheme } from 'next-themes';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface NavItem {
   name: string;
@@ -46,6 +49,7 @@ export default function Header1() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const { theme } = useTheme();
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('English');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -171,8 +175,14 @@ export default function Header1() {
           </nav>
 
           <div className="hidden items-center space-x-4 lg:flex">
-            <ThemeSwitcher />
-            <LanguageSwitcher />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger className='cursor-pointer inline-flex items-center space-x-2 rounded-full border border-border  px-4 py-2 text-sm font-medium transition-colors duration-200 focus:outline-0'>{selectedLanguage}</DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem onClick={() => setSelectedLanguage('English')}>English</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedLanguage('Türkçe')}>Türkçe</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link
               href="/login"
               className="font-medium text-foreground transition-colors duration-200 hover:text-rose-500"
@@ -189,18 +199,26 @@ export default function Header1() {
               </Link>
             </motion.div>
           </div>
-
-          <motion.button
-            className="rounded-lg p-2 transition-colors duration-200 hover:bg-muted lg:hidden"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            whileTap={{ scale: 0.95 }}
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </motion.button>
+          <div className='flex lg:hidden'>
+            <DropdownMenu>
+              <DropdownMenuTrigger className='cursor-pointer inline-flex items-center space-x-2 rounded-full border border-border  px-4 py-2 text-sm font-medium transition-colors duration-200 focus:outline-0'>{selectedLanguage}</DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem onClick={() => setSelectedLanguage('English')}>English</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedLanguage('Türkçe')}>Türkçe</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <motion.button
+              className="rounded-lg p-2 transition-colors duration-200 hover:bg-muted "
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              whileTap={{ scale: 0.95 }}
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </motion.button>
+          </div>
         </div>
 
         <AnimatePresence>
