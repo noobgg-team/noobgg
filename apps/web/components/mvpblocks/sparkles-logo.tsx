@@ -12,43 +12,23 @@ export default function SparklesLogo() {
           </span>
         </div>
 
-        <div className="mt-10 grid grid-cols-5 gap-10 items-center">
-          <Image
-            src="/logos/valorant-logo.svg"
-            alt="Valorant Logo"
-            width={220}
-            height={70}
-            className="w-full"
-          />
-          <Image
-            src="/logos/league-of-legends-logo.svg"
-            alt="League of Legends Logo"
-            width={220}
-            height={70}
-            className="w-full"
-          />
-          <Image
-            src="/logos/fortnite-logo.svg"
-            alt="Fortnite"
-            width={220}
-            height={70}
-            className="w-full"
-          />
-          <Image
-            src="/logos/pubg-logo.webp"
-            alt="PlayerUnknown's Battlegrounds"
-            width={220}
-            height={70}
-            className="w-full color-amber-50"
-          />
-
-          <Image
-            src="/logos/counter-strike-2.svg"
-            alt="Counter Strike 2"
-            width={220}
-            height={70}
-            className="w-full"
-          />
+        <div className="flex justify-center max-w-4xl gap-x-6 mt-12">
+          {[
+            { src: "/logos/valorant.svg", alt: "Valorant Logo" },
+            { src: "/logos/lol.svg", alt: "League of Legends Logo" },
+            { src: "/logos/fortnite.svg", alt: "Fortnite" },
+            { src: "/logos/pubg.svg", alt: "PlayerUnknown's Battlegrounds" },
+            { src: "/logos/cs.svg", alt: "Counter Strike 2" }
+          ].map(({ src, alt }) => (
+            <div key={src} className="relative h-auto w-auto aspect-[2/1] sm:aspect-[3/1] lg:aspect-[4/1] py-3 lg:py-5 mx-auto sm:mx-0">
+              <Image
+                src={src}
+                alt={alt}
+                fill
+                className="object-contain"
+              />
+            </div>
+          ))}
         </div>
       </div>
 
