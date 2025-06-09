@@ -82,7 +82,7 @@ export default function Header1() {
                   height={40}
                 />
               </div>
-              <span className="bg-gradient-to-r from-rose-500 to-rose-700 bg-clip-text text-2xl font-bold text-transparent">
+              <span className="bg-gradient-to-r from-[#6f52f4] to-[#9b87f5] bg-clip-text text-2xl font-bold text-transparent">
                 noob.gg
               </span>
             </Link>
@@ -101,7 +101,7 @@ export default function Header1() {
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center space-x-1 font-medium dark:text-foreground transition-colors duration-200 hover:text-rose-500",
+                    "flex items-center space-x-1 font-medium dark:text-foreground transition-colors duration-200",
                     isScrolled ? "text-foreground" : "text-background"
                   )}
                 >
@@ -151,7 +151,7 @@ export default function Header1() {
             <Link
               href="/login"
               className={cn(
-                "font-medium dark:text-foreground transition-colors duration-200 hover:text-rose-500",
+                "font-medium dark:text-foreground transition-colors duration-200",
                 isScrolled ? "text-foreground" : "text-background"
               )}
             >
@@ -160,7 +160,7 @@ export default function Header1() {
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link
                 href="/signup"
-                className="inline-flex items-center space-x-2 rounded-full bg-gradient-to-r from-rose-500 to-rose-700 px-6 py-2.5 font-medium text-white transition-all duration-200 hover:shadow-lg"
+                className="inline-flex items-center space-x-2 rounded-full bg-gradient-to-r from-[#6f52f4] to-[#9b87f5] px-6 py-2.5 font-medium text-white transition-all duration-200 hover:shadow-lg"
               >
                 <span>Get Started</span>
                 <ArrowRight className="h-4 w-4" />
@@ -212,7 +212,7 @@ export default function Header1() {
                   </Link>
                   <Link
                     href="/signup"
-                    className="block w-full rounded-lg bg-gradient-to-r from-rose-500 to-rose-700 py-2.5 text-center font-medium text-white transition-all duration-200 hover:shadow-lg"
+                    className="block w-full rounded-lg bg-gradient-to-r from-[#6f52f4] to-[#9b87f5] py-2.5 text-center font-medium text-white transition-all duration-200 hover:shadow-lg"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Get Started

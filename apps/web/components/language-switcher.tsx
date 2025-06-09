@@ -3,10 +3,10 @@
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
-import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function LanguageSwitcher({
   isScrolled,
@@ -15,21 +15,19 @@ export default function LanguageSwitcher({
 }) {
   const locale = useLocale();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [flagKey, setFlagKey] = useState(locale);
 
   const switchLanguage = () => {
-    setIsLoading(true);
     const newLocale = locale === "tr" ? "en" : "tr";
 
     document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000`;
 
-    Promise.resolve(router.refresh()).then(() => {
-      setIsLoading(false);
-    });
+    setFlagKey(newLocale);
+
+    router.refresh();
   };
 
   const currentLang = locale === "tr" ? "TR" : "EN";
-  const nextLang = locale === "tr" ? "EN" : "TR";
   const flagSrc = locale === "tr" ? "/flags/tr.svg" : "/flags/en.svg";
 
   return (
@@ -37,25 +35,31 @@ export default function LanguageSwitcher({
       variant="outline"
       size="icon"
       onClick={switchLanguage}
-      title={`Şu an: ${currentLang} - ${nextLang} için tıklayın`}
-      disabled={isLoading}
+      title={`Şu an: ${currentLang} - Tıklayınca değişir`}
       className={cn(
         isScrolled
           ? "bg-transparent hover:bg-accent/30 border-foreground/10 text-foreground"
           : "bg-transparent hover:bg-accent/10 border-accent/20 text-white"
       )}
     >
-      {isLoading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Image
-          src={flagSrc}
-          alt={currentLang}
-          width={16}
-          height={16}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={flagKey}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          transition={{ duration: 0.25 }}
           className="h-4 w-4"
-        />
-      )}
+        >
+          <Image
+            src={flagSrc}
+            alt={currentLang}
+            width={16}
+            height={16}
+            className="h-4 w-4"
+          />
+        </motion.div>
+      </AnimatePresence>
     </Button>
   );
 }
