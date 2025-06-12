@@ -18,18 +18,14 @@ export default function LanguageSwitcher({
   const [flagKey, setFlagKey] = useState(locale);
 
   const switchLanguage = () => {
-    const newLocale = locale === "tr" ? "en" : "tr";
-
+    const newLocale = flagKey === "tr" ? "en" : "tr";
     document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000`;
-
     setFlagKey(newLocale);
-
     router.refresh();
   };
 
-  const currentLang = locale === "tr" ? "TR" : "EN";
-  const flagSrc = locale === "tr" ? "/flags/tr.svg" : "/flags/en.svg";
-
+  const currentLang = flagKey === "tr" ? "TR" : "EN";
+  const flagSrc = flagKey === "tr" ? "/flags/tr.svg" : "/flags/en.svg";  
   return (
     <Button
       variant="outline"
