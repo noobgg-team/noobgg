@@ -28,6 +28,7 @@ import type {
   Badge,
   Quest
 } from '@/types/user-profile';
+import Image from 'next/image';
 
 interface UserProfilePageProps {
   profile: UserProfile;
@@ -241,9 +242,11 @@ export function UserProfilePage({
                     title={`${badge.name}: ${badge.description}`}
                   >
                     {badge.iconUrl ? (
-                      <img 
+                      <Image 
                         src={badge.iconUrl} 
                         alt={badge.name}
+                        height={32}
+                        width={32}
                         className="w-8 h-8 object-contain"
                       />
                     ) : (
@@ -312,9 +315,11 @@ export function UserProfilePage({
             <h3 className="font-semibold text-lg mb-3 text-right">Photos</h3>
             <div className="grid grid-cols-2 gap-2">
               {photos.slice(0, 4).map((photo) => (
-                <img
+                <Image
                   key={photo.id}
                   src={photo.url}
+                  width={100}
+                  height={80}
                   alt={photo.caption || 'Photo'}
                   className="w-full h-20 object-cover rounded"
                 />
