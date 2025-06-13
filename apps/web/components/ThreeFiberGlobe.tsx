@@ -665,6 +665,21 @@ const Scene = React.memo(({
       <directionalLight position={[10, 10, 5]} intensity={0.6} />
       <pointLight position={[-10, -10, -5]} intensity={0.3} color="#4fc3f7" />
 
+      {/* Invisible sphere for mouse interaction */}
+      <mesh
+        visible={false}
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          isMouseOverRef.current = true;
+        }}
+        onPointerLeave={(e) => {
+          e.stopPropagation();
+          isMouseOverRef.current = false;
+        }}
+      >
+        <sphereGeometry args={[5, 64, 64]} />
+      </mesh>
+
       <EarthGlobe />
       {/* Render real countries if enabled and data is available */}
       {showCountries && countries.length > 0 && (
@@ -952,8 +967,6 @@ export default function OptimizedGamingGlobe({ showCountries = true }: { showCou
     <WebGLErrorBoundary>
       <div
         className="relative w-full h-[800px] bg-transparent"
-        onMouseEnter={() => (isMouseOverRef.current = true)}
-        onMouseLeave={() => (isMouseOverRef.current = false)}
       >
         {/* Loading Countries Overlay */}
         {isLoadingCountries && (
