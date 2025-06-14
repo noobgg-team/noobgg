@@ -863,6 +863,26 @@ export default function OptimizedGamingGlobe({ showCountries = true }: { showCou
     setSelectedCity(city);
   }, []);
 
+  // Memoize city click handler
+  const handleCloseCityModal = useCallback((event?: React.MouseEvent) => {
+    setSelectedCity(null);
+    // When the modal is closed, we need to manually check if the mouse is still over the canvas
+    // because the canvas couldn't receive pointer events while the modal was open.
+    if (canvasRef.current && event) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const isMouseOverCanvas =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+
+      isMouseOverRef.current = isMouseOverCanvas;
+    } else {
+      // Fallback if no event is available, assume mouse is not over.
+      isMouseOverRef.current = false;
+    }
+  }, [setSelectedCity]);
+
   // Memoize scene props to prevent Canvas re-creation
   const sceneProps = useMemo(() => ({
     onCountryHover: handleCountryHover,
@@ -1188,13 +1208,11 @@ export default function OptimizedGamingGlobe({ showCountries = true }: { showCou
               </div>
             </div>
           </div>
-        )}
-
-        {/* Selected City Modal - Gaming Hub Details */}
+        )}      {/* Selected City Modal - Gaming Hub Details */}
         {selectedCity && (
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedCity(null)}
+            onClick={handleCloseCityModal}
           >
             <div
               className="bg-black/90 backdrop-blur-xl text-white rounded-2xl p-6 border border-purple-500/50 w-full max-w-md sm:max-w-lg"
@@ -1217,8 +1235,8 @@ export default function OptimizedGamingGlobe({ showCountries = true }: { showCou
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    setSelectedCity(null);
+                  onClick={(e) => {
+                    handleCloseCityModal(e);
                   }}
                   className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
                 >
@@ -1277,14 +1295,14 @@ export default function OptimizedGamingGlobe({ showCountries = true }: { showCou
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <button
-                  onClick={() => setSelectedCity(null)}
+                  onClick={handleCloseCityModal}
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-fuchsia-600 transition-all transform hover:scale-105"
                   style={{ boxShadow: '0 4px 15px rgba(123, 31, 162, 0.3)' }}
                 >
                   Join Hub
                 </button>
                 <button
-                  onClick={() => setSelectedCity(null)}
+                  onClick={handleCloseCityModal}
                   className="px-4 py-3 border border-gray-500 text-gray-300 font-semibold rounded-lg hover:bg-white/10 hover:border-gray-400 transition-all"
                 >
                   Close
