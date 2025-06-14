@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { Poppins, Exo_2 } from "next/font/google";
 import "@/styles/globals.css";
+import "@/styles/landing.css";
 import "react-toastify/dist/ReactToastify.css";
 import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
