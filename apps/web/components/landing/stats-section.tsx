@@ -20,16 +20,16 @@ export default function StatsSection() {
           </p>
         </div>
         
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <dl className="grid grid-cols-2 lg:grid-cols-4 gap-8">
           {stats.map((stat, index) => (
             <div key={index} className="text-center">
-              <div className="text-4xl lg:text-6xl font-bold text-transparent bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text mb-2">
+              <dt className="text-4xl lg:text-6xl font-bold text-transparent bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text mb-2">
                 {stat.number}
-              </div>
-              <div className="text-gray-300 text-lg">{stat.label}</div>
+              </dt>
+              <dd className="text-gray-300 text-lg">{stat.label}</dd>
             </div>
           ))}
-        </div>
+        </dl>
       </div>
     </section>
   );
