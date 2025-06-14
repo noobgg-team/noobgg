@@ -1,11 +1,19 @@
-import LandingHeroSection from "@/components/mvpblocks/landing-hero-section";
-import GameShowcase from "@/components/mvpblocks/game-showcase";
+import HeroSection from "@/components/landing/hero-section";
+import GamesSection from "@/components/landing/games-section";
+import FeaturesSection from "@/components/landing/features-section";
+import HowItWorksSection from "@/components/landing/how-it-works-section";
+import StatsSection from "@/components/landing/stats-section";
+import CTASection from "@/components/landing/cta-section";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="space-y-10">
-      <LandingHeroSection />
-      <GameShowcase />
-    </div>
+    <main className="min-h-screen">
+      <HeroSection />
+      <GamesSection />
+      <FeaturesSection />
+      <HowItWorksSection />
+      <StatsSection />
+      <CTASection />
+    </main>
   );
 }
