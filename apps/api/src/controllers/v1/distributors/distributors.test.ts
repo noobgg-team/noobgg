@@ -1,10 +1,10 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test';
 import { Context } from 'hono';
-import { db } from '../db';
+import { db } from '../../../db';
 import {
   createDistributorController,
   updateDistributorController,
-} from './v1/distributors.controller';
+} from './distributors.controller';
 
 // Mock the db module
 mock.module('../db', () => ({

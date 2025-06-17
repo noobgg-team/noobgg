@@ -5,7 +5,7 @@ import {
   createDistributorController,
   updateDistributorController,
   deleteDistributorController,
-} from "../../controllers/v1/distributors.controller";
+} from "../../controllers/v1/distributors/distributors.controller";
 
 const distributors = new Hono();
 
