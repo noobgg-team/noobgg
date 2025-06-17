@@ -5,7 +5,7 @@ import {
   getEventAttendeesByEvent,
   createEventAttendee,
   deleteEventAttendee,
-} from "../../controllers/v1/event-attendees.controller";
+} from "../../controllers/v1/eventAttendees/eventAttendees.controller";
 
 const eventAttendeesRouter = new Hono();
 
