@@ -193,11 +193,7 @@ export const updateUserProfile = async (c: Context) => {
           ? new Date(result.data.birthDate)
           : undefined,
         updatedAt: new Date(),
-        rowVersion: incrementRowVersion(currentUser.rowVersion),
       };
-      
-      // Remove rowVersion from data object as it's already set
-      delete (updateData as any).rowVersion;
       
       const [updated] = await tx
         .update(userProfiles)
