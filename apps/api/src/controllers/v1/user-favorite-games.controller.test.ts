@@ -18,7 +18,6 @@ mock.module('../../db', () => ({
   db: {
     select: mock().mockReturnValue(createQueryBuilderMock()),
     insert: mock().mockReturnValue(createQueryBuilderMock()),
-    update: mock().mockReturnValue(createQueryBuilderMock()),
     delete: mock().mockReturnValue(createQueryBuilderMock()),
     transaction: mock(),
   }
@@ -55,7 +54,6 @@ describe('UserFavoriteGames Controller', () => {
     // Reset db spies to prevent cross-test bleed
     (db.select as any).mockReset().mockReturnValue(createQueryBuilderMock());
     (db.insert as any).mockReset().mockReturnValue(createQueryBuilderMock());
-    (db.update as any).mockReset().mockReturnValue(createQueryBuilderMock());
     (db.delete as any).mockReset().mockReturnValue(createQueryBuilderMock());
     (db.transaction as any).mockReset();
   });

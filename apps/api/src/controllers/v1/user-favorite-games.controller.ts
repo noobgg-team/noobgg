@@ -6,6 +6,15 @@ import { userProfiles } from "../../db/schemas/user-profile.drizzle";
 import { gamesTable } from "../../db/schemas/games.drizzle";
 import { z } from "zod";
 import { ApiError } from "../../middleware/errorHandler";
+import { convertBigIntToString } from "../../utils/bigint-serializer";
+
+// Helper function to format validation errors in a user-friendly way
+function formatValidationErrors(fieldErrors: Record<string, string[]>): string {
+  const errors = Object.entries(fieldErrors).map(([field, messages]) => {
+    return `${field}: ${messages.join(', ')}`;
+  });
+  return errors.join('; ');
+}
 
 // Validation schemas
 const userIdSchema = z.string().regex(/^\d+$/, "Invalid user ID format");
@@ -13,23 +22,6 @@ const gameIdSchema = z.string().regex(/^\d+$/, "Invalid game ID format");
 const addFavoriteGameSchema = z.object({
   gameId: gameIdSchema,
 });
-
-function convertBigIntToString(obj: any): any {
-  if (typeof obj === "bigint") {
-    return obj.toString();
-  }
-  if (Array.isArray(obj)) {
-    return obj.map(convertBigIntToString);
-  }
-  if (obj !== null && typeof obj === "object") {
-    const converted: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      converted[key] = convertBigIntToString(value);
-    }
-    return converted;
-  }
-  return obj;
-}
 
 export const addFavoriteGame = async (c: Context) => {
   const userIdParam = c.req.param("userId");
@@ -43,7 +35,8 @@ export const addFavoriteGame = async (c: Context) => {
   const result = addFavoriteGameSchema.safeParse(data);
   
   if (!result.success) {
-    throw new ApiError(JSON.stringify(result.error.flatten().fieldErrors), 400);
+    const formattedErrors = formatValidationErrors(result.error.flatten().fieldErrors);
+    throw new ApiError(formattedErrors, 400);
   }
   
   const userId = BigInt(userIdResult.data);
