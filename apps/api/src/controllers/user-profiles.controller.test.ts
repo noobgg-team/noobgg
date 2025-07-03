@@ -1,5 +1,6 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test';
 import { Context } from 'hono';
+import { ApiError } from '../middleware/errorHandler';
 
 // Helper function for query builder mock
 function createQueryBuilderMock() {
@@ -10,8 +11,6 @@ function createQueryBuilderMock() {
     limit: mock(),
   };
 }
-
-
 
 // Mock the db module BEFORE importing anything that depends on it
 mock.module('../db', () => ({
@@ -33,6 +32,7 @@ mock.module('../db', () => ({
 import { db } from '../db';
 import {
   getUserProfile,
+  getUserProfileByUsername,
   createUserProfile,
   updateUserProfile,
   deleteUserProfile,
@@ -41,11 +41,13 @@ import {
 // Mock Hono's context
 const mockJson = mock();
 const mockReqJson = mock();
+const mockQuery = mock();
 
-const mockContext = (body?: Record<string, unknown>, params?: Record<string, string>) => ({
+const mockContext = (body?: Record<string, unknown>, params?: Record<string, string>, query?: Record<string, string>) => ({
   req: {
     json: mockReqJson.mockResolvedValue(body || {}),
-    param: (key: string) => params?.[key]
+    param: (key: string) => params?.[key],
+    query: (key: string) => query?.[key],
   },
   json: mockJson,
 }) as unknown as Context;
@@ -54,6 +56,7 @@ describe('UserProfiles Controller', () => {
   beforeEach(() => {
     mockJson.mockClear();
     mockReqJson.mockClear();
+    mockQuery.mockClear();
 
     // Reset db spies to prevent cross-test bleed
     (db.select as any).mockReset().mockReturnValue(createQueryBuilderMock());
@@ -77,8 +80,17 @@ describe('UserProfiles Controller', () => {
         firstName: 'Test',
         lastName: 'User',
         gender: 'male',
-        regionType: 'europe',
+        region: 'europe',
+        favoriteGameGenre: 'rpg',
+        playerType: 'casual',
+        industryRole: 'player',
+        lookingFor: 'teammates',
+        presenceStatus: 'online',
         createdAt: new Date(),
+        updatedAt: null,
+        deletedAt: null,
+        lastOnline: new Date(),
+        rowVersion: '0',
       };
 
       const whereMock = mock().mockResolvedValue([mockUser]);
@@ -90,9 +102,82 @@ describe('UserProfiles Controller', () => {
       await getUserProfile(c);
 
       expect(db.select).toHaveBeenCalled();
-      expect(fromMock).toHaveBeenCalledWith(expect.anything());
+      expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({
+        id: '1',
+        userKeycloakId: 'keycloak-123',
+        userName: 'testuser',
+        region: 'europe',
+        favoriteGameGenre: 'rpg',
+      }));
+    });
+
+    it('should exclude soft-deleted users by default', async () => {
+      const mockUser = {
+        id: BigInt(1),
+        userKeycloakId: 'keycloak-123',
+        userName: 'testuser',
+        gender: 'male',
+        region: 'europe',
+        favoriteGameGenre: 'rpg',
+        playerType: 'casual',
+        industryRole: 'player',
+        lookingFor: 'teammates',
+        presenceStatus: 'online',
+        createdAt: new Date(),
+        updatedAt: null,
+        deletedAt: null,
+        lastOnline: new Date(),
+        rowVersion: '0',
+      };
+
+      const whereMock = mock().mockResolvedValue([mockUser]);
+      const fromMock = mock().mockReturnValue({ where: whereMock });
+      const selectMock = db.select as any;
+      selectMock.mockReturnValue({ from: fromMock });
+
+      const c = mockContext({}, { id: '1' });
+      await getUserProfile(c);
+
       expect(whereMock).toHaveBeenCalledWith(expect.anything());
-      // BigInt conversion happens in convertBigIntToString function
+      expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({
+        id: '1',
+        deletedAt: null,
+      }));
+    });
+
+    it('should include soft-deleted users when includeDeleted=true', async () => {
+      const mockUser = {
+        id: BigInt(1),
+        userKeycloakId: 'keycloak-123',
+        userName: 'testuser',
+        firstName: null,
+        lastName: null,
+        profileImageUrl: null,
+        bannerImageUrl: null,
+        bio: null,
+        birthDate: null,
+        gender: 'unknown',
+        region: 'unknown',
+        favoriteGameGenre: 'unknown',
+        playerType: 'unknown',
+        industryRole: 'unknown',
+        lookingFor: 'unknown',
+        presenceStatus: 'unknown',
+        createdAt: new Date(),
+        updatedAt: null,
+        deletedAt: new Date(),
+        lastOnline: new Date(),
+        rowVersion: '0',
+      };
+
+      const whereMock = mock().mockResolvedValue([mockUser]);
+      const fromMock = mock().mockReturnValue({ where: whereMock });
+      const selectMock = db.select as any;
+      selectMock.mockReturnValue({ from: fromMock });
+
+      const c = mockContext({}, { id: '1' }, { includeDeleted: 'true' });
+      await getUserProfile(c);
+
       expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({
         id: '1',
         userKeycloakId: 'keycloak-123',
@@ -102,16 +187,9 @@ describe('UserProfiles Controller', () => {
 
     it('should return 400 for invalid id', async () => {
       const c = mockContext({}, { id: 'invalid' });
-      await getUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Invalid id" }, 400);
-    });
-
-    it('should return 400 for missing id', async () => {
-      const c = mockContext({}, {});
-      await getUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Invalid id" }, 400);
+      
+      await expect(getUserProfile(c)).rejects.toThrow(ApiError);
+      await expect(getUserProfile(c)).rejects.toThrow('Invalid id');
     });
 
     it('should return 404 when user not found', async () => {
@@ -121,21 +199,66 @@ describe('UserProfiles Controller', () => {
       selectMock.mockReturnValue({ from: fromMock });
 
       const c = mockContext({}, { id: '1' });
-      await getUserProfile(c);
+      
+      await expect(getUserProfile(c)).rejects.toThrow(ApiError);
+      await expect(getUserProfile(c)).rejects.toThrow('User not found');
+    });
+  });
 
-      expect(mockJson).toHaveBeenCalledWith({ error: "User not found" }, 404);
+  describe('getUserProfileByUsername', () => {
+    it('should return user profile by username successfully', async () => {
+      const mockUser = {
+        id: BigInt(1),
+        userKeycloakId: 'keycloak-123',
+        userName: 'testuser',
+        firstName: 'Test',
+        lastName: 'User',
+        gender: 'male',
+        region: 'europe',
+        favoriteGameGenre: 'rpg',
+        playerType: 'casual',
+        industryRole: 'player',
+        lookingFor: 'teammates',
+        presenceStatus: 'online',
+        createdAt: new Date(),
+        updatedAt: null,
+        deletedAt: null,
+        lastOnline: new Date(),
+        rowVersion: '0',
+      };
+
+      const whereMock = mock().mockResolvedValue([mockUser]);
+      const fromMock = mock().mockReturnValue({ where: whereMock });
+      const selectMock = db.select as any;
+      selectMock.mockReturnValue({ from: fromMock });
+
+      const c = mockContext({}, { username: 'testuser' });
+      await getUserProfileByUsername(c);
+
+      expect(db.select).toHaveBeenCalled();
+      expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({
+        id: '1',
+        userName: 'testuser',
+      }));
     });
 
-    it('should return 500 on database error', async () => {
+    it('should return 400 when username is missing', async () => {
+      const c = mockContext({}, {});
+      
+      await expect(getUserProfileByUsername(c)).rejects.toThrow(ApiError);
+      await expect(getUserProfileByUsername(c)).rejects.toThrow('Username is required');
+    });
+
+    it('should return 404 when user not found', async () => {
+      const whereMock = mock().mockResolvedValue([]);
+      const fromMock = mock().mockReturnValue({ where: whereMock });
       const selectMock = db.select as any;
-      selectMock.mockImplementation(() => {
-        throw new Error('Database error');
-      });
+      selectMock.mockReturnValue({ from: fromMock });
 
-      const c = mockContext({}, { id: '1' });
-      await getUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Internal server error" }, 500);
+      const c = mockContext({}, { username: 'nonexistent' });
+      
+      await expect(getUserProfileByUsername(c)).rejects.toThrow(ApiError);
+      await expect(getUserProfileByUsername(c)).rejects.toThrow('User not found');
     });
   });
 
@@ -146,22 +269,28 @@ describe('UserProfiles Controller', () => {
       firstName: 'Test',
       lastName: 'User',
       gender: 'male',
-      regionType: 'europe',
+      region: 'europe',
+      favoriteGameGenre: 'rpg',
+      playerType: 'casual',
+      industryRole: 'player',
+      lookingFor: 'teammates',
+      presenceStatus: 'online',
     };
 
-    it('should create user profile successfully', async () => {
+    it('should create user profile successfully with all new fields', async () => {
       const createdUser = {
         id: BigInt(1),
         ...validUserData,
         createdAt: new Date(),
+        lastOnline: new Date(),
+        rowVersion: '0',
       };
 
-      // Mock successful transaction - no existing users, successful insert
       (db.transaction as any).mockImplementation(async (callback: any) => {
         const txMock = {
           select: mock().mockReturnValue({
             from: mock().mockReturnValue({
-              where: mock().mockResolvedValue([]) // No existing users for both checks
+              where: mock().mockResolvedValue([])
             })
           }),
           insert: mock().mockReturnValue({
@@ -177,34 +306,97 @@ describe('UserProfiles Controller', () => {
       await createUserProfile(c);
 
       expect(db.transaction).toHaveBeenCalled();
-      // BigInt conversion happens in convertBigIntToString function
-      expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({
-        id: '1',
-        userKeycloakId: 'keycloak-123',
-        userName: 'testuser',
-      }), 201);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "User profile created successfully",
+          data: expect.objectContaining({
+            id: '1',
+            userKeycloakId: 'keycloak-123',
+            userName: 'testuser',
+            favoriteGameGenre: 'rpg',
+            playerType: 'casual',
+            rowVersion: '0',
+          })
+        }),
+        201
+      );
     });
 
-    it('should return 400 for invalid data', async () => {
-      const invalidData = { userName: '' }; // Missing required fields
-      const c = mockContext(invalidData);
+    it('should use default enum values when not provided', async () => {
+      const minimalUserData = {
+        userKeycloakId: 'keycloak-456',
+        userName: 'minimaluser',
+      };
+
+      const createdUser = {
+        id: BigInt(2),
+        ...minimalUserData,
+        gender: 'unknown',
+        region: 'unknown',
+        favoriteGameGenre: 'unknown',
+        playerType: 'unknown',
+        industryRole: 'unknown',
+        lookingFor: 'unknown',
+        presenceStatus: 'unknown',
+        createdAt: new Date(),
+        lastOnline: new Date(),
+        rowVersion: '0',
+      };
+
+      (db.transaction as any).mockImplementation(async (callback: any) => {
+        const txMock = {
+          select: mock().mockReturnValue({
+            from: mock().mockReturnValue({
+              where: mock().mockResolvedValue([])
+            })
+          }),
+          insert: mock().mockReturnValue({
+            values: mock().mockReturnValue({
+              returning: mock().mockResolvedValue([createdUser])
+            })
+          })
+        };
+        return await callback(txMock);
+      });
+
+      const c = mockContext(minimalUserData);
       await createUserProfile(c);
 
       expect(mockJson).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.any(Object) }),
-        400
+        expect.objectContaining({
+          data: expect.objectContaining({
+            gender: 'unknown',
+            region: 'unknown',
+            favoriteGameGenre: 'unknown',
+            playerType: 'unknown',
+            industryRole: 'unknown',
+            lookingFor: 'unknown',
+            presenceStatus: 'unknown',
+          })
+        }),
+        201
       );
+    });
+
+    it('should return 400 for invalid enum values', async () => {
+      const invalidData = {
+        ...validUserData,
+        gender: 'invalid-gender',
+      };
+      const c = mockContext(invalidData);
+      
+      await expect(createUserProfile(c)).rejects.toThrow(ApiError);
     });
 
     it('should return 409 when Keycloak ID already exists', async () => {
       const existingUser = { id: BigInt(2), userKeycloakId: 'keycloak-123' };
 
-      // Mock transaction that finds existing Keycloak ID
       (db.transaction as any).mockImplementation(async (callback: any) => {
         const txMock = {
           select: mock().mockReturnValue({
             from: mock().mockReturnValue({
-              where: mock().mockResolvedValue([existingUser]) // Existing user found
+              where: mock().mockResolvedValue([existingUser])
             })
           })
         };
@@ -212,26 +404,25 @@ describe('UserProfiles Controller', () => {
       });
 
       const c = mockContext(validUserData);
-      await createUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Keycloak ID already exists" }, 409);
+      
+      await expect(createUserProfile(c)).rejects.toThrow(ApiError);
+      await expect(createUserProfile(c)).rejects.toThrow('Keycloak ID already exists');
     });
 
     it('should return 409 when username already exists', async () => {
       const existingUser = { id: BigInt(2), userName: 'testuser' };
 
-      // Mock transaction: Keycloak ID check passes, username check fails
       (db.transaction as any).mockImplementation(async (callback: any) => {
         const txMock = {
           select: mock()
             .mockReturnValueOnce({
               from: mock().mockReturnValue({
-                where: mock().mockResolvedValue([]) // No existing Keycloak ID
+                where: mock().mockResolvedValue([])
               })
             })
             .mockReturnValueOnce({
               from: mock().mockReturnValue({
-                where: mock().mockResolvedValue([existingUser]) // Existing username
+                where: mock().mockResolvedValue([existingUser])
               })
             })
         };
@@ -239,20 +430,9 @@ describe('UserProfiles Controller', () => {
       });
 
       const c = mockContext(validUserData);
-      await createUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Username already exists" }, 409);
-    });
-
-    it('should return 500 on database error', async () => {
-      (db.transaction as any).mockImplementation(() => {
-        throw new Error('Database error');
-      });
-
-      const c = mockContext(validUserData);
-      await createUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Internal server error" }, 500);
+      
+      await expect(createUserProfile(c)).rejects.toThrow(ApiError);
+      await expect(createUserProfile(c)).rejects.toThrow('Username already exists');
     });
   });
 
@@ -260,215 +440,261 @@ describe('UserProfiles Controller', () => {
     const validUpdateData = {
       firstName: 'Updated',
       lastName: 'Name',
-      gender: 'male',
-      regionType: 'europe',
+      favoriteGameGenre: 'moba',
+      playerType: 'competitive',
+      rowVersion: '0',
     };
 
     it('should update user profile successfully', async () => {
-      const updatedUser = {
+      const currentUser = {
         id: BigInt(1),
         userKeycloakId: 'keycloak-123',
         userName: 'testuser',
-        firstName: 'Updated',
-        lastName: 'Name',
-        gender: 'male',
-        regionType: 'europe',
-        updatedAt: new Date(),
+        rowVersion: '0',
       };
 
-      // Mock successful update chain - AFTER beforeEach reset
-      const returningMock = mock().mockResolvedValue([updatedUser]);
-      const whereMock = mock().mockReturnValue({ returning: returningMock });
-      const setMock = mock().mockReturnValue({ where: whereMock });
-      (db.update as any).mockReturnValue({ set: setMock });
-
-      const c = mockContext(validUpdateData, { id: '1' });
-      await updateUserProfile(c);
-
-      expect(db.update).toHaveBeenCalledWith(expect.anything());
-      expect(setMock).toHaveBeenCalledWith(expect.objectContaining({
+      const updatedUser = {
+        ...currentUser,
         firstName: 'Updated',
         lastName: 'Name',
-        updatedAt: expect.any(Date),
-      }));
-      expect(whereMock).toHaveBeenCalledWith(expect.anything());
-      expect(returningMock).toHaveBeenCalled();
-      // BigInt conversion happens in convertBigIntToString function
-      expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({
-        id: '1',
-        firstName: 'Updated',
-        lastName: 'Name',
-      }));
-    });
+        favoriteGameGenre: 'moba',
+        playerType: 'competitive',
+        updatedAt: new Date(),
+        rowVersion: '1',
+      };
 
-    it('should return 400 for invalid id', async () => {
-      const c = mockContext(validUpdateData, { id: 'invalid' });
-      await updateUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Invalid id" }, 400);
-    });
-
-    it('should return 400 for missing id', async () => {
-      const c = mockContext(validUpdateData, {});
-      await updateUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Invalid id" }, 400);
-    });
-
-    it('should return 400 for invalid data', async () => {
-      const invalidData = { userName: '' }; // Invalid username
-      const c = mockContext(invalidData, { id: '1' });
-      await updateUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.any(Object) }),
-        400
-      );
-    });
-
-    it('should return 400 for empty payload', async () => {
-      // Empty body - updateUserProfileSchema will fail validation due to required fields
-      const c = mockContext({}, { id: '1' });
-      await updateUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.any(Object) }),
-        400
-      );
-    });
-
-    it('should return 409 when Keycloak ID already exists for different user', async () => {
-      const updateData = { userKeycloakId: 'keycloak-456', gender: 'male', regionType: 'europe' };
-      const existingUser = { id: BigInt(2), userKeycloakId: 'keycloak-456' };
-
-      const whereMock = mock().mockResolvedValue([existingUser]);
-      const fromMock = mock().mockReturnValue({ where: whereMock });
-      const selectMock = db.select as any;
-      selectMock.mockReturnValue({ from: fromMock });
-
-      const c = mockContext(updateData, { id: '1' });
-      await updateUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Keycloak ID already exists" }, 409);
-    });
-
-    it('should return 409 when username already exists for different user', async () => {
-      const updateData = { userName: 'existinguser', gender: 'male', regionType: 'europe' };
-      const existingUser = { id: BigInt(2), userName: 'existinguser' };
-
-      // Mock username check - since no Keycloak ID provided, only username check happens
-      const usernameWhereMock = mock().mockResolvedValue([existingUser]);
-      const usernameFromMock = mock().mockReturnValue({ where: usernameWhereMock });
-      const selectMock = db.select as any;
-      selectMock.mockReturnValue({ from: usernameFromMock });
-
-      const c = mockContext(updateData, { id: '1' });
-      await updateUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Username already exists" }, 409);
-    });
-
-    it('should return 404 when user not found', async () => {
-      // Mock update chain to return empty array (user not found)
-      const returningMock = mock().mockResolvedValue([]);
-      const whereMock = mock().mockReturnValue({ returning: returningMock });
-      const setMock = mock().mockReturnValue({ where: whereMock });
-      (db.update as any).mockReturnValue({ set: setMock });
-
-      const c = mockContext(validUpdateData, { id: '1' });
-      await updateUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "User not found" }, 404);
-    });
-
-    it('should return 500 on database error', async () => {
-      // Mock db.update to throw an error
-      (db.update as any).mockImplementation(() => {
-        throw new Error('Database error');
+      (db.transaction as any).mockImplementation(async (callback: any) => {
+        const txMock = {
+          select: mock().mockReturnValue({
+            from: mock().mockReturnValue({
+              where: mock().mockResolvedValue([currentUser])
+            })
+          }),
+          update: mock().mockReturnValue({
+            set: mock().mockReturnValue({
+              where: mock().mockReturnValue({
+                returning: mock().mockResolvedValue([updatedUser])
+              })
+            })
+          })
+        };
+        return await callback(txMock);
       });
 
       const c = mockContext(validUpdateData, { id: '1' });
       await updateUserProfile(c);
 
-      expect(mockJson).toHaveBeenCalledWith({ error: "Internal server error" }, 500);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "User profile updated successfully",
+          data: expect.objectContaining({
+            id: '1',
+            firstName: 'Updated',
+            lastName: 'Name',
+            favoriteGameGenre: 'moba',
+            playerType: 'competitive',
+            rowVersion: '1',
+          })
+        }),
+        200
+      );
+    });
+
+    it('should return 409 for optimistic concurrency conflict', async () => {
+      const currentUser = {
+        id: BigInt(1),
+        userKeycloakId: 'keycloak-123',
+        userName: 'testuser',
+        rowVersion: '5', // Different from request
+      };
+
+      (db.transaction as any).mockImplementation(async (callback: any) => {
+        const txMock = {
+          select: mock().mockReturnValue({
+            from: mock().mockReturnValue({
+              where: mock().mockResolvedValue([currentUser])
+            })
+          })
+        };
+        return await callback(txMock);
+      });
+
+      const c = mockContext(validUpdateData, { id: '1' });
+      
+      await expect(updateUserProfile(c)).rejects.toThrow(ApiError);
+      await expect(updateUserProfile(c)).rejects.toThrow('Resource has been modified by another user');
+    });
+
+    it('should return 400 for empty payload (excluding rowVersion)', async () => {
+      const c = mockContext({ rowVersion: '0' }, { id: '1' });
+      
+      await expect(updateUserProfile(c)).rejects.toThrow(ApiError);
+      await expect(updateUserProfile(c)).rejects.toThrow('No data provided');
+    });
+
+    it('should increment rowVersion on successful update', async () => {
+      const currentUser = {
+        id: BigInt(1),
+        rowVersion: '42',
+      };
+
+      const updatedUser = {
+        ...currentUser,
+        firstName: 'Updated',
+        rowVersion: '43', // Should be incremented
+      };
+
+      (db.transaction as any).mockImplementation(async (callback: any) => {
+        const txMock = {
+          select: mock().mockReturnValue({
+            from: mock().mockReturnValue({
+              where: mock().mockResolvedValue([currentUser])
+            })
+          }),
+          update: mock().mockReturnValue({
+            set: mock().mockReturnValue({
+              where: mock().mockReturnValue({
+                returning: mock().mockResolvedValue([updatedUser])
+              })
+            })
+          })
+        };
+        return await callback(txMock);
+      });
+
+      const c = mockContext({ firstName: 'Updated', rowVersion: '42' }, { id: '1' });
+      await updateUserProfile(c);
+
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            rowVersion: '43',
+          })
+        }),
+        200
+      );
     });
   });
 
   describe('deleteUserProfile', () => {
-    it('should delete user profile successfully (soft delete)', async () => {
-      const deletedUser = {
+    it('should soft delete user profile successfully', async () => {
+      const currentUser = {
         id: BigInt(1),
         userKeycloakId: 'keycloak-123',
         userName: 'testuser',
-        firstName: 'Test',
-        lastName: 'User',
-        gender: 'male',
-        regionType: 'europe',
-        deletedAt: new Date(),
-        updatedAt: new Date(),
+        deletedAt: null,
+        rowVersion: '2',
       };
 
-      const returningMock = mock().mockResolvedValue([deletedUser]);
-      const whereMock = mock().mockReturnValue({ returning: returningMock });
-      const setMock = mock().mockReturnValue({ where: whereMock });
-      const updateMock = db.update as any;
-      updateMock.mockReturnValue({ set: setMock });
+      const deletedUser = {
+        ...currentUser,
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+        rowVersion: '3',
+      };
 
-      const c = mockContext({}, { id: '1' });
-      await deleteUserProfile(c);
-
-      expect(db.update).toHaveBeenCalledWith(expect.anything());
-      expect(setMock).toHaveBeenCalledWith(expect.objectContaining({
-        deletedAt: expect.any(Date),
-        updatedAt: expect.any(Date),
-      }));
-      expect(whereMock).toHaveBeenCalledWith(expect.anything());
-      expect(returningMock).toHaveBeenCalled();
-      // BigInt conversion happens in convertBigIntToString function
-      expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({
-        id: '1',
-        userKeycloakId: 'keycloak-123',
-        userName: 'testuser',
-      }));
-    });
-
-    it('should return 400 for invalid id', async () => {
-      const c = mockContext({}, { id: 'invalid' });
-      await deleteUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Invalid id" }, 400);
-    });
-
-    it('should return 400 for missing id', async () => {
-      const c = mockContext({}, {});
-      await deleteUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "Invalid id" }, 400);
-    });
-
-    it('should return 404 when user not found', async () => {
-      const returningMock = mock().mockResolvedValue([]);
-      const whereMock = mock().mockReturnValue({ returning: returningMock });
-      const setMock = mock().mockReturnValue({ where: whereMock });
-      const updateMock = db.update as any;
-      updateMock.mockReturnValue({ set: setMock });
-
-      const c = mockContext({}, { id: '1' });
-      await deleteUserProfile(c);
-
-      expect(mockJson).toHaveBeenCalledWith({ error: "User not found" }, 404);
-    });
-
-    it('should return 500 on database error', async () => {
-      const updateMock = db.update as any;
-      updateMock.mockImplementation(() => {
-        throw new Error('Database error');
+      (db.transaction as any).mockImplementation(async (callback: any) => {
+        const txMock = {
+          select: mock().mockReturnValue({
+            from: mock().mockReturnValue({
+              where: mock().mockResolvedValue([currentUser])
+            })
+          }),
+          update: mock().mockReturnValue({
+            set: mock().mockReturnValue({
+              where: mock().mockReturnValue({
+                returning: mock().mockResolvedValue([deletedUser])
+              })
+            })
+          })
+        };
+        return await callback(txMock);
       });
 
       const c = mockContext({}, { id: '1' });
       await deleteUserProfile(c);
 
-      expect(mockJson).toHaveBeenCalledWith({ error: "Internal server error" }, 500);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "User profile deleted successfully",
+          data: expect.objectContaining({
+            id: '1',
+            rowVersion: '3',
+          })
+        }),
+        200
+      );
+    });
+
+    it('should return 409 when user already deleted', async () => {
+      const currentUser = {
+        id: BigInt(1),
+        deletedAt: new Date(),
+        rowVersion: '2',
+      };
+
+      (db.transaction as any).mockImplementation(async (callback: any) => {
+        const txMock = {
+          select: mock().mockReturnValue({
+            from: mock().mockReturnValue({
+              where: mock().mockResolvedValue([currentUser])
+            })
+          })
+        };
+        return await callback(txMock);
+      });
+
+      const c = mockContext({}, { id: '1' });
+      
+      await expect(deleteUserProfile(c)).rejects.toThrow(ApiError);
+      await expect(deleteUserProfile(c)).rejects.toThrow('User already deleted');
+    });
+
+    it('should increment rowVersion on deletion', async () => {
+      const currentUser = {
+        id: BigInt(1),
+        deletedAt: null,
+        rowVersion: '99',
+      };
+
+      const deletedUser = {
+        ...currentUser,
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+        rowVersion: '100',
+      };
+
+      (db.transaction as any).mockImplementation(async (callback: any) => {
+        const txMock = {
+          select: mock().mockReturnValue({
+            from: mock().mockReturnValue({
+              where: mock().mockResolvedValue([currentUser])
+            })
+          }),
+          update: mock().mockReturnValue({
+            set: mock().mockReturnValue({
+              where: mock().mockReturnValue({
+                returning: mock().mockResolvedValue([deletedUser])
+              })
+            })
+          })
+        };
+        return await callback(txMock);
+      });
+
+      const c = mockContext({}, { id: '1' });
+      await deleteUserProfile(c);
+
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            rowVersion: '100',
+          })
+        }),
+        200
+      );
     });
   });
 });
