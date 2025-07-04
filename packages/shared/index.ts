@@ -62,5 +62,6 @@ export * from "./dto/lobby-language.dto";
 export * from "./dto/lobby-member.dto";
 export * from "./dto/game-distributor.dto";
 export * from "./dto/game-platform.dto";
+export * from "./dto/user-social-link.dto";
 
 export type { Language } from "./schemas/languages";
